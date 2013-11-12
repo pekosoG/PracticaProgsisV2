@@ -1,0 +1,14 @@
+Modos de Direccionamiento
+
+Inherente (INH)-> Sin Operando
+Inmediato (IMM)-> [#]%$@#\\d* -> 8bits 0 a 255, 16bits 256 a 65535
+Directo   (DIR)-> [#%$@]*\\d* -> 0 a 255
+Extendido (EXT)-> [#%$@]*\\d* -> 256 a 65535 or Etiqueta
+Indzdo 5b (IDX)-> \d*,([XxYy]|([sS][pP])|([pP][cC]))$ -> -16 a 15
+Indzdo 9b (IDX1)-> \d*,([XxYy]|([sS][pP])|([pP][cC]))$ -> -256 a -17 ^ 16 a 255
+Indzdo 16b (IDX2)-> \d*,([XxYy]|([sS][pP])|([pP][cC]))$ -> 256 a 65535
+Indzdo Indir 16b ([IDX2])-> \[\d*,([XxYy]|([sS][pP])|([pP][cC]))\] -> 0 a 65535
+Indzdo Pre-Post (IDX)-> \d*,(([-+]([XxYy]|([sS][pP])|([pP][cC])))|(([XxYy]|([sS][pP])|([pP][cC]))[-+])) -> 1 a 8
+Indzdo Acumulador (IDX)-> [AaBbDd],([XxYy]|([sS][pP])|([pP][cC]))$
+Indzdo Acumulador Indir ([D,IDX])-> \[[AaBbDd],([XxYy]|([sS][pP])|([pP][cC]))\]$
+Relativo (REL)-> [^\d*][a-zA-Z]+([0-9]*[_]*[a-zA-Z]*)* -> 8bits

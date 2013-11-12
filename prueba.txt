@@ -1,0 +1,6 @@
+   ORG $e300
+INI EQU $365
+   LDAA INI
+ LDX  #$1234
+ LDAA    55
+END
