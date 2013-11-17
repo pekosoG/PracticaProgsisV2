@@ -9,6 +9,7 @@ public class LineaASM {
 	private ResultadoTabop resultTabop=null;
 	private String result="";
 	private String conloc="";
+	private String codMaq="";
 	
 	
 	public LineaASM(String etiqueta, String instruccion, String operando) {
@@ -45,7 +46,11 @@ public class LineaASM {
 	}
 
 	public void setCodMaq(String codMaq) {
-		this.resultTabop.setCodMaq(codMaq);
+		this.codMaq=codMaq;
+	}
+	
+	public String getCodMaq() {
+		return this.codMaq;
 	}
 	
 	public void setEtiqueta(String etiqueta) {

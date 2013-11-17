@@ -1,6 +1,8 @@
 package com;
 
 import java.util.Formatter;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Vector;
 
 import javax.swing.JOptionPane;
@@ -12,8 +14,8 @@ public class AnalizadorLineas {
 	private static String REGEX_Inmediato="[#][%$@#]*\\d*";
 	private static String REGEX_Directo="[#%$@]*\\d*";
 	private static String REGEX_Extendido=REGEX_Directo;
-	private static String REGEX_xysp="([XxYy]|([sS][pP])|([pP][cC]))";
-	private static String REGEX_Indizado="\\d*,"+REGEX_xysp+"$";
+	private static String REGEX_xysp="(([Xx]|[Yy])|([sS][pP])|([pP][cC]))";
+	private static String REGEX_Indizado="\\-{0,1}\\d*,"+REGEX_xysp+"$";
 	private static String REGEX_Indizado_Indirecto="\\[\\d*,"+REGEX_xysp+"\\]";
 	private static String REGEX_Indizado_PrePost="\\d*,(([-+]"+REGEX_xysp+")|("+REGEX_xysp+"[-+]))";
 	private static String REGEX_Indizado_Acumulador="[AaBbDd],"+REGEX_xysp+"$";
@@ -24,6 +26,9 @@ public class AnalizadorLineas {
 	public static Vector<ResultadoTabop> tabop;
 	public static Vector<Compara_inst> spects_ins;
 	public static Vector<String> palTabsim;
+	public static Map<String,String> losRegistros;
+	public static Map<String,String> losPrepost;
+	public static Map<String,String> losAcum;
 	
 	public static int elContloc=0;
 	
@@ -49,6 +54,10 @@ public class AnalizadorLineas {
 		
 		spects_ins.add(new Compara_inst("IDX",REGEX_Indizado,-16,15,"Indizado 5b"));
 		
+		spects_ins.add(new Compara_inst("IDX",REGEX_Indizado_PrePost,1,8,"Indizado Pre-Post Decremento"));
+		
+		spects_ins.add(new Compara_inst("IDX",REGEX_Indizado_Acumulador,0,0,"Indizado Acumulador"));
+		
 		spects_ins.add(new Compara_inst("IDX1",REGEX_Indizado,-256,-17,"Indizado 9b"));
 		
 		spects_ins.add(new Compara_inst("IDX1",REGEX_Indizado,16,255,"Indizado 9b"));
@@ -56,10 +65,6 @@ public class AnalizadorLineas {
 		spects_ins.add(new Compara_inst("IDX2",REGEX_Indizado,256,65535,"Indizado 16b"));
 		
 		spects_ins.add(new Compara_inst("[IDX2]",REGEX_Indizado_Indirecto,0,65535,"Indizado 16b"));
-
-		spects_ins.add(new Compara_inst("IDX",REGEX_Indizado_PrePost,1,8,"Indizado Pre-Post Decremento"));
-		
-		spects_ins.add(new Compara_inst("IDX",REGEX_Indizado_Acumulador,0,0,"Indizado Acumulador"));
 		
 		spects_ins.add(new Compara_inst("[D,IDX]",REGEX_Indizado_Acumulador_Indirecto,0,0,"Indizado Acumulador Indirecto"));
 
@@ -67,6 +72,34 @@ public class AnalizadorLineas {
 		
 		spects_ins.add(new Compara_inst("REL","("+REGEX_Etiqueta+")|("+REGEX_Relativo+")",255,65535,"Relativo 8b"));
 		
+		losRegistros= new HashMap<String,String>();
+		losRegistros.put("X","00");
+		losRegistros.put("Y","01");
+		losRegistros.put("SP","10");
+		losRegistros.put("PC","11");
+		
+		losPrepost= new HashMap<String,String>();
+		losPrepost.put("+8","0111");
+		losPrepost.put("+7","0110");
+		losPrepost.put("+6","0101");
+		losPrepost.put("+5","0100");
+		losPrepost.put("+4","0011");
+		losPrepost.put("+3","0010");
+		losPrepost.put("+2","0001");
+		losPrepost.put("+1","0000");
+		losPrepost.put("-1","1111");
+		losPrepost.put("-2","1110");
+		losPrepost.put("-3","1101");
+		losPrepost.put("-4","1100");
+		losPrepost.put("-5","1011");
+		losPrepost.put("-6","1010");
+		losPrepost.put("-7","1001");
+		losPrepost.put("-8","1000");
+		
+		losAcum=new HashMap<String,String>();
+		losAcum.put("A","00");
+		losAcum.put("B","01");
+		losAcum.put("D","10");
 	}
 	
 	public static Vector<LineaASM> procesaLineas(Vector<String> lineas){
@@ -90,7 +123,9 @@ public class AnalizadorLineas {
 		for(LineaASM elementAt:resultado) {
 			if(!(elementAt instanceof Comentario)&& elementAt.getProblema().length()==0) {
 				if(elementAt.getOperando().length()>0&&!elementAt.getOperando().matches(REGEX_Etiqueta)) //para cambiar el OP a HEX
-					elementAt.setOperando(Integer.toHexString(obtieneValor(elementAt.getOperando())));
+					try{
+						elementAt.setOperando(Integer.toHexString(obtieneValor(elementAt.getOperando())));
+					}catch(java.lang.NumberFormatException ee) {}
 				cambiaMaq(elementAt); //cambiamos el CodMaq...
 			}else
 				break;
@@ -207,7 +242,9 @@ public class AnalizadorLineas {
 		
 		//Para el INH no hace falta hacer este desmadreeee!!!....
 		
-		if(elementAt.getResTabop().getDireccionamiento().equalsIgnoreCase("DIR")) {
+		String direc=elementAt.getResTabop().getDireccionamiento();
+		
+		if(direc.equalsIgnoreCase("DIR")) {
 			String auxMaq=elementAt.getResTabop().getCodmaquina();
 			String auxOp=elementAt.getOperando();
 			auxMaq=auxMaq.substring(0,auxMaq.length()-3);
@@ -215,7 +252,7 @@ public class AnalizadorLineas {
 			elementAt.setCodMaq(auxMaq);
 		}
 		
-		if(elementAt.getResTabop().getDireccionamiento().equalsIgnoreCase("EXT")) {
+		if(direc.equalsIgnoreCase("EXT")) {
 			String auxMaq=elementAt.getResTabop().getCodmaquina();
 			String auxOp=elementAt.getOperando();
 			if(!auxOp.matches(REGEX_Etiqueta)) {
@@ -236,7 +273,7 @@ public class AnalizadorLineas {
 			}
 		}
 		
-		if(elementAt.getResTabop().getDireccionamiento().equalsIgnoreCase("IMM")) {
+		if(direc.equalsIgnoreCase("IMM")) {
 			int auxOP=obtieneValor("$"+elementAt.getOperando());
 			String auxMaq=elementAt.getResTabop().getCodmaquina();
 			String auxOp=elementAt.getOperando();
@@ -252,9 +289,154 @@ public class AnalizadorLineas {
 			}
 		}
 		
+		if(direc.equalsIgnoreCase("IDX")||direc.equalsIgnoreCase("IDX1")||direc.equalsIgnoreCase("IDX2")) {
+			if(elementAt.getOperando().matches(REGEX_Indizado)) {
+				String elNumOP=elementAt.getOperando().replaceAll(",[^\\-{0,1}\\d*#$%@]*"," ").trim();
+				int valOP=0;
+				if(elNumOP.length()>0)
+					valOP=obtieneValor(elNumOP);
+				if(valOP>=-16 && valOP<=15) //IDX de 5b
+					elementAt.setCodMaq(paraIDX5b(elementAt,valOP));
+				if((valOP>=-256&&valOP<=-17)||(valOP>=16 && valOP<=255))
+					elementAt.setCodMaq(paraIDX9b(elementAt,valOP,1));
+				if(valOP>=246 && valOP<=65535)
+					elementAt.setCodMaq(paraIDX9b(elementAt,valOP,2));
+			}
+			if(elementAt.getOperando().matches(REGEX_Indizado_PrePost)) {//Para los Pre-Post
+				elementAt.setCodMaq(checaPrePost(elementAt));					
+			}
+			if(elementAt.getOperando().matches(REGEX_Indizado_Acumulador)) {
+				elementAt.setCodMaq(checaIdxAcum(elementAt));
+			}
+		}
 		//Falta hacer la rutina para que sean cadenas HEX bonitas...
+		
+		
 	}
+	
+	private static String checaIdxAcum(LineaASM elementAt) {
+		String result="111",elOp=elementAt.getOperando();
+		String aux="";
+		
+		String acum=elOp.substring(0,1);
+		String elSPPC=elOp.substring(elOp.indexOf(",")+1,elOp.length()).toUpperCase();
+		
+		String value=losRegistros.get(elSPPC);
+		acum=losAcum.get(acum);
+		
+		result+=value+"1"+acum;
 
+		//La cadena Binaria, la convertimos a su valor Entero, para despues convertirla a Hex
+		result=Integer.toHexString(Integer.valueOf(result, 2)).toUpperCase();
+		result=String.format("%2s", result).replace(' ','0');//Le damos el formato de FFFF
+
+		aux=elementAt.getResTabop().getCodmaquina();
+
+		//Quitamos los bytes necesarios y los sustituimos con el calculado
+		aux=aux.substring(0, aux.length()-3);
+		aux+=result;
+		return aux;
+	}
+	
+	private static String checaPrePost(LineaASM elementAt) {
+		String result="",elOperando=elementAt.getOperando();
+		String aux;
+		
+		String numero=elOperando.substring(0,1);
+		String elSPPC=elOperando.substring(elOperando.indexOf(",")+1,elOperando.length());
+		int posSign=elSPPC.indexOf("+");
+		if(posSign==-1)
+			posSign=elSPPC.indexOf("-");
+		char signo=elSPPC.charAt(posSign);
+		elSPPC=elSPPC.replaceAll("[+-]"," ").trim();
+		
+		System.out.println(elOperando+" * "+elSPPC+" * "+posSign+" * "+signo+" * "+numero);
+		
+		String value=losRegistros.get(elSPPC);
+		
+		result+=value+"1";
+		if(posSign==0)
+			result+="0";
+		else
+			result+="1";
+		aux=signo+numero;
+		
+		result+=losPrepost.get(aux);
+		
+		//La cadena Binaria, la convertimos a su valor Entero, para despues convertirla a Hex
+		result=Integer.toHexString(Integer.valueOf(result, 2)).toUpperCase();
+		result=String.format("%2s", result).replace(' ','0');//Le damos el formato de FFFF
+		
+		aux=elementAt.getResTabop().getCodmaquina();
+		
+		//Quitamos los bytes necesarios y los sustituimos con el calculado
+		aux=aux.substring(0, aux.length()-3);
+		aux+=result;
+		return aux;
+
+	}
+	
+	private static String paraIDX5b(LineaASM elementAt,int valOP) {
+		//Operandos están en formato NUM*,
+		String result="",aux="";
+		
+		//ESta linea obtiene el valor de X,Y,SP,PC del Operando
+		String elNumOP=elementAt.getOperando().substring(elementAt.getOperando().indexOf(',')+1).toUpperCase().trim();
+		String value=losRegistros.get(elNumOP); //Aqui obtenemos el valor binario de eso
+		
+		result+=value+"0"; //aqui tenemos rr0
+		
+		//Aqui obtenemos la cadena binaria del numero del operando
+		aux=Integer.toBinaryString(valOP); 
+		aux=String.format("%4s", aux).replace(' ', '0');//y le damos el formato de nnnnn
+		
+		if(aux.length()>4)
+			aux=aux.substring(aux.length()-4, aux.length());
+		
+		result+=aux; //Aqui ya tenemos rr0nnnnn
+		
+		//La cadena Binaria, la convertimos a su valor Entero, para despues convertirla a Hex
+		result=Integer.toHexString(Integer.valueOf(result, 2)).toUpperCase();
+		result=String.format("%2s", result).replace(' ','0');//Le damos el formato de FFFF
+		
+		
+		aux=elementAt.getResTabop().getCodmaquina();
+		
+		//Quitamos los bytes necesarios y los sustituimos con el calculado
+		aux=aux.substring(0, aux.length()-3);
+		aux+=result;
+		return aux;
+	}
+	
+	private static String paraIDX9b(LineaASM elementAt,int valOP,int ext) {
+		String result="111",aux="";
+		
+		//ESta linea obtiene el valor de X,Y,SP,PC del Operando
+		String elNumOP=elementAt.getOperando().substring(elementAt.getOperando().indexOf(',')+1).toUpperCase().trim();
+		String value=losRegistros.get(elNumOP); //Aqui obtenemos el valor binario de eso
+		
+		if(ext==1)
+			result+=value+"000"; //Aqui ya tenemos 111nn0
+		else
+			result+=value+"010";
+		
+		//La cadena Binaria, la convertimos a su valor Entero, para despues convertirla a Hex
+		result=Integer.toHexString(Integer.valueOf(result, 2)).toUpperCase();
+		result=String.format("%2s", result).replace(' ','0');//Le damos el formato de FF
+		
+		aux=elementAt.getResTabop().getCodmaquina();
+		
+		//Quitamos los bytes necesarios y los sustituimos con el calculado
+		if(ext==1)
+			aux=aux.substring(0, aux.length()-6);
+		else
+			aux=aux.substring(0, aux.length()-9);
+		aux+=result+Integer.toHexString(valOP);
+		result=aux.toUpperCase();
+		
+		return result;
+	}
+	
 	private static void identificaTabsim(LineaASM elementAt) {
 		boolean error=false;
 		if(elementAt.getEtiqueta().length()>0) {
@@ -305,16 +487,28 @@ public class AnalizadorLineas {
 									}
 								}else {elementAt.setProblema("");elementAt.setProblema("Error! Operando Invalido 1");}
 							}catch(NumberFormatException NFE) {
-								String aux[]=valor_String.split(",");
-								int valorElement=obtieneValor(aux[0]);
-								if(valorElement>=comp_aux.min&&valorElement<=comp_aux.max) {
-									if(elementAt.getOperando().matches(comp_aux.REGEX)) {
+								try {
+									String aux[]=valor_String.split(",");
+									int valorElement;
+									if(aux[0].length()>0)
+										valorElement=obtieneValor(aux[0]);
+									else valorElement=0;
+									if(valorElement>=comp_aux.min&&valorElement<=comp_aux.max) {
+										if(elementAt.getOperando().matches(comp_aux.REGEX)) {
+											result=true;
+											elementAt.setResult(comp_aux.Descrip);
+											elementAt.setResTabop(resAux);
+											break;
+										}
+									}else { elementAt.setProblema("");elementAt.setProblema("Error! Operando Invalido 2");}
+								}catch(NumberFormatException NFE2) {
+									if(valor_String.matches(comp_aux.REGEX)) {
 										result=true;
 										elementAt.setResult(comp_aux.Descrip);
 										elementAt.setResTabop(resAux);
 										break;
-									}
-								}else { elementAt.setProblema("");elementAt.setProblema("Error! Operando Invalido 2");}
+									}else { elementAt.setProblema("");elementAt.setProblema("Error! Operando Invalido 3");}
+								}
 							}
 						}else{
 							if(elementAt.getOperando().matches(comp_aux.REGEX)) {

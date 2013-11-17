@@ -69,7 +69,7 @@ public class ManejaArchivo {
 						throw new Exception();
 					ResultadoTabop resAux=aux.getResTabop();
 					String conloc=""+aux.getConloc(),
-							codMaq=""+resAux.getCodmaquina(),
+							codMaq=""+aux.getCodMaq(),
 							et=""+aux.getEtiqueta(),
 							inst=""+aux.getInstruccion(),
 							op=""+aux.getOperando(),
