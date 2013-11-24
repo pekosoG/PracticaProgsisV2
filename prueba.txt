@@ -1,2 +1,2 @@
-	LDAA  A,X
+   ADCA [D,X]
  END

@@ -99,7 +99,7 @@ public class AnalizadorLineas {
 		losAcum=new HashMap<String,String>();
 		losAcum.put("A","00");
 		losAcum.put("B","01");
-		losAcum.put("D","10");
+		losAcum.put("D	","10");
 	}
 	
 	public static Vector<LineaASM> procesaLineas(Vector<String> lineas){
@@ -299,19 +299,62 @@ public class AnalizadorLineas {
 					elementAt.setCodMaq(paraIDX5b(elementAt,valOP));
 				if((valOP>=-256&&valOP<=-17)||(valOP>=16 && valOP<=255))
 					elementAt.setCodMaq(paraIDX9b(elementAt,valOP,1));
-				if(valOP>=246 && valOP<=65535)
+				if(valOP>=256 && valOP<=65535)
 					elementAt.setCodMaq(paraIDX9b(elementAt,valOP,2));
 			}
-			if(elementAt.getOperando().matches(REGEX_Indizado_PrePost)) {//Para los Pre-Post
-				elementAt.setCodMaq(checaPrePost(elementAt));					
-			}
-			if(elementAt.getOperando().matches(REGEX_Indizado_Acumulador)) {
-				elementAt.setCodMaq(checaIdxAcum(elementAt));
+			else{
+				if(elementAt.getOperando().matches(REGEX_Indizado_PrePost)) {//Para los Pre-Post
+					elementAt.setCodMaq(checaPrePost(elementAt));					
+				}
+				if(elementAt.getOperando().matches(REGEX_Indizado_Acumulador)) {
+					elementAt.setCodMaq(checaIdxAcum(elementAt));
+				}
 			}
 		}
 		//Falta hacer la rutina para que sean cadenas HEX bonitas...
 		
+		if(direc.equalsIgnoreCase("[IDX2]")){
+			elementAt.setCodMaq(paraIDX16(elementAt,1));
+		}
+		if(direc.equalsIgnoreCase("[D,IDX]")){
+			elementAt.setCodMaq(paraIDX16(elementAt,2));
+		}
+	}
+	
+	private static String paraIDX16(LineaASM elementAt,int ext) {
+		String result="111",elOP=elementAt.getOperando(),aux="";
+		String elNumOP="";
+		if(ext==1)
+			elNumOP=elOP.substring(1,elOP.indexOf(","));
+		String elValor=elOP.substring(elOP.indexOf(",")+1, elOP.length()-1);
 		
+		elValor=losRegistros.get(elValor);
+		
+		if(ext==1)
+			result+=elValor+"011";
+		else
+			result+=elValor+"111";
+			
+		//La cadena Binaria, la convertimos a su valor Entero, para despues convertirla a Hex
+		result=Integer.toHexString(Integer.valueOf(result, 2)).toUpperCase();
+		result=String.format("%2s", result).replace(' ','0');//Le damos el formato de FFFF
+		
+		aux=elementAt.getResTabop().getCodmaquina();
+		
+		//Quitamos los bytes necesarios y los sustituimos con el calculado
+		if(ext==1)
+			aux=aux.substring(0, aux.length()-9);
+		else
+			aux=aux.substring(0, aux.length()-3);
+		aux+=result;
+		
+		if(ext==1) {
+			String pre=Integer.toHexString(Integer.valueOf(elNumOP));
+			pre=String.format("%4s", pre).replace(' ','0').toUpperCase();
+			aux+=pre;
+		}
+		
+		return aux;
 	}
 	
 	private static String checaIdxAcum(LineaASM elementAt) {
