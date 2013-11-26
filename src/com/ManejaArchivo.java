@@ -76,6 +76,17 @@ public class ManejaArchivo {
 							dir=""+resAux.getDireccionamiento(),
 							bytes=""+resAux.getBytesCalculados();
 					linea=conloc+"\t"+codMaq+"\t"+et+"\t"+inst+"\t"+op+"\t"+dir+"\t"+bytes;
+				}catch(NullPointerException ne) {
+					if(aux.getInstruccion().equalsIgnoreCase("END")) {
+						String conloc=""+aux.getConloc(),
+								codMaq=""+aux.getCodMaq(),
+								et=""+aux.getEtiqueta(),
+								inst=""+aux.getInstruccion(),
+								op=""+aux.getOperando();
+						linea=conloc+"\t"+codMaq+"\t"+et+"\t"+inst+"\t"+op;
+					}
+					else
+						error=true;
 				}catch(Exception ee) {
 					//ee.printStackTrace();
 					linea="\t\t"+aux.getInstruccion()+"\t"+aux.getProblema();
