@@ -695,12 +695,22 @@ public class AnalizadorLineas {
 		//Directiva de constante
 		if((inst.equalsIgnoreCase("DB")||inst.equalsIgnoreCase("DC.B")||inst.equalsIgnoreCase("FBC")&&(op>=0&&op<=255))) {
 			elementAt.setResTabop(new ResultadoTabop(inst,"Directiva de Constante",1));
+			elementAt.setCodMaq(Integer.toHexString(op).toUpperCase());
+			calculaConLoc(elementAt);
 			result=true;}
 		if((inst.equalsIgnoreCase("DW")||inst.equalsIgnoreCase("DC.w")||inst.equalsIgnoreCase("FDB")&&(op>=0&&op<=65535))) {
 			elementAt.setResTabop(new ResultadoTabop(inst,"Directiva de Constante",2));
+			elementAt.setCodMaq(Integer.toHexString(op).toUpperCase());
+			calculaConLoc(elementAt);
 			result=true;}
-		if(inst.equalsIgnoreCase("FCC")&&elementAt.getOperando().length()>0) {
+		if(inst.equalsIgnoreCase("FCC")&&elementAt.getOperando().length()>0&& elementAt.getOperando().trim().matches("\"[\\w]*\"")) {
 			elementAt.setResTabop(new ResultadoTabop(inst,"Directiva de Constante",elementAt.getOperando().length()-2));
+			String aux="",aux2=elementAt.getOperando();
+			for(int a=1; a<aux2.length()-1;a++)
+				aux+=String.valueOf((int)aux2.charAt(a));
+			aux=aux.toUpperCase();
+			elementAt.setCodMaq(aux);
+			calculaConLoc(elementAt);
 			result=true;}
 		
 		//Directivas de Reserva de Memoria

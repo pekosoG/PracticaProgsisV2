@@ -30,7 +30,7 @@ public class ResultadoTabop {
 	public ResultadoTabop(String instrucc,String direcc,int totalBytes) {
 		this.instrucc=instrucc;
 		this.direccionamiento=direcc;
-		this.totalBytes=totalBytes;
+		this.bytesCalculados=String.valueOf(totalBytes);
 		if(!direcc.contains("ORG"))
 			this.codmaquina+=new Formatter().format("%04x",totalBytes);
 	}
