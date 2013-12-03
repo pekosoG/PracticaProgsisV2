@@ -22,6 +22,7 @@ public class AnalizadorLineas {
 	private static String REGEX_Indizado_Acumulador_Indirecto="\\[[AaBbDd],"+REGEX_xysp+"\\]$";
 	private static String REGEX_Relativo="[^\\d*][a-zA-Z]+([0-9]*[_]*[a-zA-Z]*)*";
 		
+	public static Vector<LineaASM> resultado=new Vector<LineaASM>();
 	public static boolean despuesEnd=false,huboEnd=false,huboORG=false;
 	public static Vector<ResultadoTabop> tabop;
 	public static Vector<Compara_inst> spects_ins;
@@ -99,11 +100,10 @@ public class AnalizadorLineas {
 		losAcum=new HashMap<String,String>();
 		losAcum.put("A","00");
 		losAcum.put("B","01");
-		losAcum.put("D	","10");
+		losAcum.put("D","10");
 	}
 	
 	public static Vector<LineaASM> procesaLineas(Vector<String> lineas){
-		Vector<LineaASM> resultado=new Vector<LineaASM>();
 		
 		//Primera pasada!
 		for(String tempLinea:lineas) {
@@ -119,6 +119,14 @@ public class AnalizadorLineas {
 				checaResultado(resultado.elementAt(resultado.size()-1));
 		}
 		
+		if(despuesEnd)
+			System.out.println("Warning: Existen mas lineas despues del END");
+		
+		LineaASM aux= new LineaASM();
+		aux.setInstruccion("END");
+		calculaConLoc(aux);
+		resultado.add(aux);
+		
 		//La segunda Vuleta!!!		
 		for(LineaASM elementAt:resultado) {
 			if(!(elementAt instanceof Comentario)&& elementAt.getProblema().length()==0) {
@@ -130,12 +138,7 @@ public class AnalizadorLineas {
 			}else
 				break;
 		}
-		if(despuesEnd)
-			System.out.println("Warning: Existen mas lineas despues del END");
-		
-		LineaASM aux= new LineaASM();
-		aux.setInstruccion("END");
-		resultado.add(aux);
+
 		ManejaArchivo.escribeTabsim(palTabsim,"TabSim.txt");
 		
 		return resultado;
@@ -240,9 +243,18 @@ public class AnalizadorLineas {
 
 	private static void cambiaMaq(LineaASM elementAt) {
 		
-		//Para el INH no hace falta hacer este desmadreeee!!!....
+		String direc="";
+		try {
+			direc=elementAt.getResTabop().getDireccionamiento();
+		}catch(NullPointerException ee) {
+			return;
+		}
 		
-		String direc=elementAt.getResTabop().getDireccionamiento();
+		//Para el INH no hace falta hacer este desmadreeee!!!....
+		if(direc.equalsIgnoreCase("INH")) {
+			String cod=elementAt.getResTabop().getCodmaquina();
+			elementAt.setCodMaq(cod);
+		}
 		
 		if(direc.equalsIgnoreCase("DIR")) {
 			String auxMaq=elementAt.getResTabop().getCodmaquina();
@@ -319,6 +331,59 @@ public class AnalizadorLineas {
 		if(direc.equalsIgnoreCase("[D,IDX]")){
 			elementAt.setCodMaq(paraIDX16(elementAt,2));
 		}
+		
+		if(direc.equalsIgnoreCase("REL")) {
+			elementAt.setCodMaq(paraREL(elementAt));
+		}
+	}
+	
+	private static String paraREL(LineaASM elementAt) {
+		boolean encontrado=false;
+		String result="",nextCont="";
+		String tempOp=elementAt.getOperando();
+		
+		for(String ee:palTabsim) {
+			String a[]=ee.split("\\s");
+			ee=a[0];
+			if(ee.equalsIgnoreCase(tempOp)) {
+				tempOp=a[1];
+				encontrado=true;
+				break;
+			}
+		}
+		if(encontrado) {
+			int index=resultado.indexOf(elementAt);
+			if(index<resultado.size()) {
+				nextCont=resultado.get(index+1).getConloc();
+				int diferencia=Integer.valueOf(tempOp, 16)-Integer.valueOf(nextCont, 16);
+				int rangos[]= {-128,127};
+				int mochale=2;
+				
+				if(elementAt.getInstruccion().charAt(0)=='L' || elementAt.getInstruccion().charAt(0)=='l') {
+					rangos[0]=-32768;
+					rangos[1]=32767;
+					mochale=5;
+				}
+				
+				if(diferencia>=rangos[0]&&diferencia<=rangos[1]) {
+					result=elementAt.getResTabop().getCodmaquina();
+					//System.out.println(result+"----");
+					result=result.substring(0, result.length()-mochale);
+					
+					nextCont=Integer.toHexString(diferencia).toUpperCase();
+					if(mochale==2)
+						nextCont=String.format("%2s", nextCont).replace(' ','0');
+					
+					if(mochale==5)
+						nextCont=String.format("%4s", nextCont).replace(' ','0');
+
+					result+=nextCont;
+				}				
+				
+			}
+		}
+		
+		return result;
 	}
 	
 	private static String paraIDX16(LineaASM elementAt,int ext) {
@@ -505,7 +570,8 @@ public class AnalizadorLineas {
 			Contaux=Integer.valueOf(elementAt.getResTabop().getBytesCalculados(),10);
 			elContloc+=Contaux;
 		}catch(Exception ee) {
-			ee.printStackTrace();
+			if(!elementAt.getInstruccion().equalsIgnoreCase("END"))
+				ee.printStackTrace();
 		}
 	}
 
